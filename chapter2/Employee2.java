@@ -1,4 +1,4 @@
-package InheritanceInterface;
+package chapter2;
 
 public class Employee2 {
     Employee(String name) {
