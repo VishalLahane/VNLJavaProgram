@@ -1,0 +1,902 @@
+                                                               Slip 15                                                                         .
+
+Q.1 Write a program to create a child process using fork().The parent should goto sleep state and child process should begin its execution. In the child process, use execl() to execute the “ls” command.
+Ans:
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+int main() {
+    pid_t pid = fork(); // Create a new process
+
+    if (pid < 0) {
+        // Fork failed
+        perror("Fork failed");
+        return 1;
+    } else if (pid == 0) {
+        // Child process
+        printf("Child process (PID: %d) executing 'ls' command...\n", getpid());
+        
+        // Execute the 'ls' command
+        execl("/bin/ls", "ls", NULL);
+        
+        // If execl returns, it must have failed
+        perror("execl failed");
+        exit(1);
+    } else {
+        // Parent process
+        printf("Parent process (PID: %d) going to sleep...\n", getpid());
+        sleep(5); // Sleep for 5 seconds
+        printf("Parent process (PID: %d) woke up!\n", getpid());
+        
+        // Wait for the child process to finish
+        wait(NULL);
+        printf("Child process finished. Parent exiting.\n");
+    }
+
+    return 0;
+}
+
+Q.2 Write the simulation program to implement demand paging and show the page scheduling
+and total number of page faults for the following given page reference string. Give input n as the number of memory frames
+Reference String :7, 0, 1, 2, 0, 3, 0, 4, 2, 3, 0, 3, 2
+Implement LRU
+Ans:
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#define MAX_FRAMES 10
+#define MAX_PAGES 12
+
+int find_page(int frames[], int n, int page) {
+    for (int i = 0; i < n; i++) {
+        if (frames[i] == page) {
+            return i; // Page found
+        }
+    }
+    return -1; // Page not found
+}
+
+int find_lru_index(int time[], int n) {
+    int min_index = 0;
+    for (int i = 1; i < n; i++) {
+        if (time[i] < time[min_index]) {
+            min_index = i; // Find the least recently used page
+        }
+    }
+    return min_index;
+}
+
+int main() {
+    int frames[MAX_FRAMES];
+    int reference_string[MAX_PAGES] = {7, 0, 1, 2, 0, 3, 0, 4, 2, 3, 0, 3, 2};
+    int n, page_faults = 0;
+    int time[MAX_FRAMES]; // To track the last accessed time of pages
+    int current_time = 0;
+
+    // Input number of frames
+    printf("Enter the number of memory frames (max %d): ", MAX_FRAMES);
+    scanf("%d", &n);
+
+    // Initialize frames and time arrays
+    for (int i = 0; i < n; i++) {
+        frames[i] = -1; // -1 indicates an empty frame
+        time[i] = 0; // Initialize access time
+    }
+
+    printf("Reference String: ");
+    for (int i = 0; i < MAX_PAGES; i++) {
+        printf("%d ", reference_string[i]);
+    }
+    printf("\n");
+
+    for (int i = 0; i < MAX_PAGES; i++) {
+        int page = reference_string[i];
+        int page_index = find_page(frames, n, page);
+        
+        if (page_index == -1) {
+            // Page fault occurs
+            page_faults++;
+            int lru_index = find_lru_index(time, n);
+            frames[lru_index] = page; // Replace LRU page
+            time[lru_index] = current_time; // Update access time
+        } else {
+            // Page is found in frames, update access time
+            time[page_index] = current_time;
+        }
+        current_time++; // Increment current time
+    }
+
+    // Print the results
+    printf("Total number of page faults: %d\n", page_faults);
+    return 0;
+}
+
+
+
+                                                        Slip 16                                                      .
+
+Q.1 Write a program to find the execution time taken for execution of a given set of instructions
+(use clock()
+function)
+Ans:
+#include <stdio.h>
+#include <time.h>
+
+void perform_operations() {
+    // Simulating some operations
+    for (long i = 0; i < 100000000; i++); // A simple loop to consume time
+}
+
+int main() {
+    clock_t start_time, end_time;
+    double cpu_time_used;
+
+    // Start the timer
+    start_time = clock();
+
+    // Perform the operations
+    perform_operations();
+
+    // Stop the timer
+    end_time = clock();
+
+    // Calculate the time taken
+    cpu_time_used = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
+
+    // Output the execution time
+    printf("Execution time: %f seconds\n", cpu_time_used);
+
+    return 0;
+}
+
+
+
+Q.2 Write the simulation program to implement demand paging and show the page scheduling
+and total number of page faults for the following given page reference string. Give input n =3 as
+the number of memory frames.
+
+Reference String : 12,15,12,18,6,8,11,12,19,12,6,8,12,15,19,8
+Implement OPT
+Ans:
+#include <stdio.h>
+
+#define MAX_FRAMES 3
+#define MAX_REFERENCES 15
+
+// Function to find the page to replace using the OPT algorithm
+int find_optimal_page(int frames[], int n, int reference[], int index, int frame_count) {
+    int farthest = index;
+    int optimal_page = -1;
+
+    for (int i = 0; i < frame_count; i++) {
+        int j;
+        for (j = index; j < n; j++) {
+            if (frames[i] == reference[j]) {
+                if (j > farthest) {
+                    farthest = j;
+                    optimal_page = i; // Track the page that will be used furthest in the future
+                }
+                break;
+            }
+        }
+        // If the page is not found in future references, it is the optimal candidate for replacement
+        if (j == n) {
+            return i;
+        }
+    }
+    return (optimal_page == -1) ? 0 : optimal_page; // If all pages are found, return the first page
+}
+
+int main() {
+    int frames[MAX_FRAMES];
+    int reference_string[MAX_REFERENCES] = {12, 15, 12, 18, 6, 8, 11, 12, 19, 12, 6, 8, 12, 15, 19, 8};
+    int n = sizeof(reference_string) / sizeof(reference_string[0]);
+    int page_faults = 0;
+
+    // Initialize frames
+    for (int i = 0; i < MAX_FRAMES; i++) {
+        frames[i] = -1; // -1 indicates an empty frame
+    }
+
+    printf("Reference String: ");
+    for (int i = 0; i < n; i++) {
+        printf("%d ", reference_string[i]);
+    }
+    printf("\n");
+
+    for (int i = 0; i < n; i++) {
+        int page = reference_string[i];
+        int page_found = 0;
+
+        // Check if the page is already in one of the frames
+        for (int j = 0; j < MAX_FRAMES; j++) {
+            if (frames[j] == page) {
+                page_found = 1; // Page is found in memory
+                break;
+            }
+        }
+
+        // If page not found, a page fault occurs
+        if (!page_found) {
+            // Find the optimal page to replace
+            int replace_index = find_optimal_page(frames, n, reference_string, i + 1, MAX_FRAMES);
+            frames[replace_index] = page; // Replace the page
+            page_faults++;
+            printf("Page fault occurred! Replacing page with: %d\n", page);
+        }
+
+        // Print the current state of frames
+        printf("Current frames: ");
+        for (int j = 0; j < MAX_FRAMES; j++) {
+            if (frames[j] != -1) {
+                printf("%d ", frames[j]);
+            }
+        }
+        printf("\n");
+    }
+
+    // Print total page faults
+    printf("Total number of page faults: %d\n", page_faults);
+    return 0;
+}
+
+
+                                           Slip 17                                                            .  
+
+Q.1 Write the program to calculate minimum number of resources needed to avoid
+deadlock.
+Ans:
+#include <stdio.h>
+
+#define MAX_PROCESSES 10
+#define MAX_RESOURCES 10
+
+void calculate_minimum_resources(int max[][MAX_RESOURCES], int allocation[][MAX_RESOURCES], int need[][MAX_RESOURCES], int processes, int resources) {
+    int total_resources[MAX_RESOURCES] = {0};
+    int available[MAX_RESOURCES] = {0};
+    
+    // Calculate the total resources needed to avoid deadlock
+    for (int i = 0; i < processes; i++) {
+        for (int j = 0; j < resources; j++) {
+            total_resources[j] += max[i][j]; // Total maximum resources required
+            available[j] += allocation[i][j]; // Total currently allocated resources
+        }
+    }
+
+    // Calculate the resources needed to ensure no deadlock
+    int min_resources[MAX_RESOURCES];
+    for (int j = 0; j < resources; j++) {
+        min_resources[j] = total_resources[j] - available[j];
+        if (min_resources[j] < 0) {
+            min_resources[j] = 0; // Minimum resources cannot be negative
+        }
+    }
+
+    // Output the results
+    printf("Minimum number of resources needed to avoid deadlock:\n");
+    for (int j = 0; j < resources; j++) {
+        printf("Resource %d: %d\n", j + 1, min_resources[j]);
+    }
+}
+
+int main() {
+    int processes, resources;
+    int max[MAX_PROCESSES][MAX_RESOURCES], allocation[MAX_PROCESSES][MAX_RESOURCES], need[MAX_PROCESSES][MAX_RESOURCES];
+
+    // Input number of processes and resources
+    printf("Enter the number of processes: ");
+    scanf("%d", &processes);
+    printf("Enter the number of resources: ");
+    scanf("%d", &resources);
+
+    // Input maximum resource requirements for each process
+    printf("Enter the maximum resource matrix (max[i][j]):\n");
+    for (int i = 0; i < processes; i++) {
+        for (int j = 0; j < resources; j++) {
+            scanf("%d", &max[i][j]);
+        }
+    }
+
+    // Input allocation matrix for each process
+    printf("Enter the allocation matrix (allocation[i][j]):\n");
+    for (int i = 0; i < processes; i++) {
+        for (int j = 0; j < resources; j++) {
+            scanf("%d", &allocation[i][j]);
+        }
+    }
+
+    // Calculate the need matrix
+    for (int i = 0; i < processes; i++) {
+        for (int j = 0; j < resources; j++) {
+            need[i][j] = max[i][j] - allocation[i][j];
+        }
+    }
+
+    // Calculate the minimum resources needed
+    calculate_minimum_resources(max, allocation, need, processes, resources);
+
+    return 0;
+}
+
+
+
+Q.2 Write the simulation program to implement demand paging and show the page scheduling
+and total number of page faults for the following given page reference string. Give input n=3 as
+the number of memory frames.
+
+Reference String : 12,15,12,18,6,8,11,12,19,12,6,8,12,15,19,8
+Implement OPT
+Ans:
+#include <stdio.h>
+
+#define MAX_FRAMES 3
+#define MAX_REFERENCES 16
+
+// Function to find the page to replace using the OPT algorithm
+int find_optimal_page(int frames[], int n, int reference[], int index, int frame_count) {
+    int farthest = index;
+    int optimal_page = -1;
+
+    for (int i = 0; i < frame_count; i++) {
+        int j;
+        for (j = index; j < n; j++) {
+            if (frames[i] == reference[j]) {
+                if (j > farthest) {
+                    farthest = j;
+                    optimal_page = i; // Track the page that will be used furthest in the future
+                }
+                break;
+            }
+        }
+        // If the page is not found in future references, it is the optimal candidate for replacement
+        if (j == n) {
+            return i;
+        }
+    }
+    return (optimal_page == -1) ? 0 : optimal_page; // If all pages are found, return the first page
+}
+
+int main() {
+    int frames[MAX_FRAMES];
+    int reference_string[MAX_REFERENCES] = {12, 15, 12, 18, 6, 8, 11, 12, 19, 12, 6, 8, 12, 15, 19, 8};
+    int n = sizeof(reference_string) / sizeof(reference_string[0]);
+    int page_faults = 0;
+
+    // Initialize frames
+    for (int i = 0; i < MAX_FRAMES; i++) {
+        frames[i] = -1; // -1 indicates an empty frame
+    }
+
+    printf("Reference String: ");
+    for (int i = 0; i < n; i++) {
+        printf("%d ", reference_string[i]);
+    }
+    printf("\n");
+
+    for (int i = 0; i < n; i++) {
+        int page = reference_string[i];
+        int page_found = 0;
+
+        // Check if the page is already in one of the frames
+        for (int j = 0; j < MAX_FRAMES; j++) {
+            if (frames[j] == page) {
+                page_found = 1; // Page is found in memory
+                break;
+            }
+        }
+
+        // If page not found, a page fault occurs
+        if (!page_found) {
+            // Find the optimal page to replace
+            int replace_index = find_optimal_page(frames, n, reference_string, i + 1, MAX_FRAMES);
+            frames[replace_index] = page; // Replace the page
+            page_faults++;
+            printf("Page fault occurred! Replacing page with: %d\n", page);
+        }
+
+        // Print the current state of frames
+        printf("Current frames: ");
+        for (int j = 0; j < MAX_FRAMES; j++) {
+            if (frames[j] != -1) {
+                printf("%d ", frames[j]);
+            }
+        }
+        printf("\n");
+    }
+
+    // Print total page faults
+    printf("Total number of page faults: %d\n", page_faults);
+    return 0;
+}
+
+
+                                                   Slip 18                                                                ,
+
+Q. 1 Write a C program to accept the number of process and resources and find the need matrix
+content and display it.
+Ans:
+#include <stdio.h>
+
+#define MAX_PROCESSES 10
+#define MAX_RESOURCES 10
+
+void calculate_need(int processes, int resources, int max[][MAX_RESOURCES], int allocation[][MAX_RESOURCES], int need[][MAX_RESOURCES]) {
+    for (int i = 0; i < processes; i++) {
+        for (int j = 0; j < resources; j++) {
+            need[i][j] = max[i][j] - allocation[i][j];
+        }
+    }
+}
+
+void display_matrix(int matrix[][MAX_RESOURCES], int processes, int resources) {
+    printf("Matrix:\n");
+    for (int i = 0; i < processes; i++) {
+        for (int j = 0; j < resources; j++) {
+            printf("%d ", matrix[i][j]);
+        }
+        printf("\n");
+    }
+}
+
+int main() {
+    int processes, resources;
+    int max[MAX_PROCESSES][MAX_RESOURCES], allocation[MAX_PROCESSES][MAX_RESOURCES], need[MAX_PROCESSES][MAX_RESOURCES];
+
+    // Input number of processes and resources
+    printf("Enter the number of processes: ");
+    scanf("%d", &processes);
+    printf("Enter the number of resources: ");
+    scanf("%d", &resources);
+
+    // Input maximum resource requirements for each process
+    printf("Enter the maximum resource matrix (max[i][j]):\n");
+    for (int i = 0; i < processes; i++) {
+        for (int j = 0; j < resources; j++) {
+            printf("Max[%d][%d]: ", i, j);
+            scanf("%d", &max[i][j]);
+        }
+    }
+
+    // Input allocation matrix for each process
+    printf("Enter the allocation matrix (allocation[i][j]):\n");
+    for (int i = 0; i < processes; i++) {
+        for (int j = 0; j < resources; j++) {
+            printf("Allocation[%d][%d]: ", i, j);
+            scanf("%d", &allocation[i][j]);
+        }
+    }
+
+    // Calculate the need matrix
+    calculate_need(processes, resources, max, allocation, need);
+
+    // Display the need matrix
+    printf("\nNeed Matrix:\n");
+    display_matrix(need, processes, resources);
+
+    return 0;
+}
+
+Q.2 Write the simulation program to implement demand paging and show the page scheduling
+and total number of page faults for the following given page reference string. Give input n as the number of memory frames.
+
+Reference String : 12,15,12,18,6,8,11,12,19,12,6,8,12,15,19,8
+Implement OPT
+Ans:
+
+#include <stdio.h>
+
+#define MAX_FRAMES 10
+#define MAX_REFERENCES 16
+
+// Function to find the page to replace using the OPT algorithm
+int find_optimal_page(int frames[], int n, int reference[], int index, int frame_count) {
+    int farthest = index;
+    int optimal_page = -1;
+
+    for (int i = 0; i < frame_count; i++) {
+        int j;
+        for (j = index; j < n; j++) {
+            if (frames[i] == reference[j]) {
+                if (j > farthest) {
+                    farthest = j;
+                    optimal_page = i; // Track the page that will be used furthest in the future
+                }
+                break;
+            }
+        }
+        // If the page is not found in future references, it is the optimal candidate for replacement
+        if (j == n) {
+            return i;
+        }
+    }
+    return (optimal_page == -1) ? 0 : optimal_page; // If all pages are found, return the first page
+}
+
+int main() {
+    int frames[MAX_FRAMES];
+    int reference_string[MAX_REFERENCES] = {12, 15, 12, 18, 6, 8, 11, 12, 19, 12, 6, 8, 12, 15, 19, 8};
+    int n = sizeof(reference_string) / sizeof(reference_string[0]);
+    int page_faults = 0;
+    int frame_count;
+
+    // Input the number of memory frames
+    printf("Enter the number of memory frames (1 to %d): ", MAX_FRAMES);
+    scanf("%d", &frame_count);
+    if (frame_count < 1 || frame_count > MAX_FRAMES) {
+        printf("Invalid number of frames. Please enter a value between 1 and %d.\n", MAX_FRAMES);
+        return 1;
+    }
+
+    // Initialize frames
+    for (int i = 0; i < frame_count; i++) {
+        frames[i] = -1; // -1 indicates an empty frame
+    }
+
+    printf("Reference String: ");
+    for (int i = 0; i < n; i++) {
+        printf("%d ", reference_string[i]);
+    }
+    printf("\n");
+
+    for (int i = 0; i < n; i++) {
+        int page = reference_string[i];
+        int page_found = 0;
+
+        // Check if the page is already in one of the frames
+        for (int j = 0; j < frame_count; j++) {
+            if (frames[j] == page) {
+                page_found = 1; // Page is found in memory
+                break;
+            }
+        }
+
+        // If page not found, a page fault occurs
+        if (!page_found) {
+            // Find the optimal page to replace
+            int replace_index = find_optimal_page(frames, n, reference_string, i + 1, frame_count);
+            frames[replace_index] = page; // Replace the page
+            page_faults++;
+            printf("Page fault occurred! Replacing page with: %d\n", page);
+        }
+
+        // Print the current state of frames
+        printf("Current frames: ");
+        for (int j = 0; j < frame_count; j++) {
+            if (frames[j] != -1) {
+                printf("%d ", frames[j]);
+            }
+        }
+        printf("\n");
+    }
+
+    // Print total page faults
+    printf("Total number of page faults: %d\n", page_faults);
+    return 0;
+}
+
+
+                                                     Slip 19                                                          .
+
+
+Q.1 Write a program to create a child process using fork().The parent should goto sleep state and
+child process should begin its execution. In the child process, use execl() to execute the “ls” command.
+Ans:
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+int main() {
+    pid_t pid;
+
+    // Create a child process
+    pid = fork();
+
+    if (pid < 0) {
+        // Error occurred
+        perror("Fork failed");
+        exit(1);
+    } else if (pid == 0) {
+        // Child process
+        printf("Child Process: Executing 'ls' command...\n");
+        execl("/bin/ls", "ls", NULL); // Execute the 'ls' command
+        // If execl returns, it means there was an error
+        perror("execl failed");
+        exit(1);
+    } else {
+        // Parent process
+        printf("Parent Process: Going to sleep...\n");
+        sleep(5); // Sleep for 5 seconds
+        printf("Parent Process: Waking up after sleep.\n");
+        
+        // Wait for the child process to complete
+        wait(NULL);
+        printf("Parent Process: Child has finished executing.\n");
+    }
+
+    return 0;
+}
+
+Q.2   Write the program to simulate Non-preemptive Priority scheduling. The arrival time and first CPU burst and priority for different n number of processes should be input to the algorithm.
+Assume the fixed IO waiting time (2 units). The next CPU-burst should be generated randomly.
+The output should give Gantt chart, turnaround time and waiting time for each process. Also find the average waiting time and turnaround time.
+Ans:
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define MAX_PROCESSES 10
+
+typedef struct {
+    int pid;         // Process ID
+    int arrival;     // Arrival time
+    int burst;       // Initial CPU burst time
+    int priority;    // Priority
+    int waiting;     // Waiting time
+    int turnaround;  // Turnaround time
+} Process;
+
+// Function to compare processes based on priority and arrival time
+int compare(const void *a, const void *b) {
+    Process *p1 = (Process *)a;
+    Process *p2 = (Process *)b;
+
+    if (p1->arrival == p2->arrival) {
+        return p1->priority - p2->priority; // Higher priority first
+    }
+    return p1->arrival - p2->arrival; // Earlier arrival first
+}
+
+// Function to generate a random CPU burst
+int generate_random_burst() {
+    return rand() % 5 + 1; // Random burst between 1 and 5
+}
+
+int main() {
+    int n;
+    Process processes[MAX_PROCESSES];
+    int total_waiting_time = 0, total_turnaround_time = 0;
+
+    srand(time(NULL)); // Seed for random number generation
+
+    // Input number of processes
+    printf("Enter the number of processes (max %d): ", MAX_PROCESSES);
+    scanf("%d", &n);
+
+    // Input process details
+    for (int i = 0; i < n; i++) {
+        processes[i].pid = i + 1; // Process ID
+        printf("Enter arrival time, burst time, and priority for Process %d:\n", processes[i].pid);
+        printf("Arrival Time: ");
+        scanf("%d", &processes[i].arrival);
+        printf("Burst Time: ");
+        scanf("%d", &processes[i].burst);
+        printf("Priority: ");
+        scanf("%d", &processes[i].priority);
+    }
+
+    // Sort processes by arrival time and priority
+    qsort(processes, n, sizeof(Process), compare);
+
+    int time = 0;
+    int completed = 0;
+    int gantt[MAX_PROCESSES * 2]; // Gantt chart array
+    int gantt_index = 0;
+
+    while (completed < n) {
+        int idx = -1;
+        for (int i = 0; i < n; i++) {
+            // Find the next process to execute
+            if (processes[i].arrival <= time && processes[i].burst > 0) {
+                if (idx == -1 || processes[i].priority < processes[idx].priority) {
+                    idx = i;
+                }
+            }
+        }
+
+        if (idx != -1) {
+            // Process found, execute it
+            gantt[gantt_index++] = processes[idx].pid; // Add process to Gantt chart
+            time += processes[idx].burst; // Increment time by burst time
+
+            // Calculate waiting and turnaround times
+            processes[idx].waiting = time - processes[idx].arrival - processes[idx].burst;
+            processes[idx].turnaround = time - processes[idx].arrival;
+
+            total_waiting_time += processes[idx].waiting;
+            total_turnaround_time += processes[idx].turnaround;
+
+            // Mark the process as completed
+            processes[idx].burst = 0;
+            completed++;
+        } else {
+            // No process is ready, increment time
+            time++;
+        }
+
+        // Generate next CPU burst for each process after completion
+        for (int i = 0; i < n; i++) {
+            if (processes[i].burst == 0 && completed < n) {
+                processes[i].burst = generate_random_burst(); // Assign a new random burst time
+            }
+        }
+    }
+
+    // Output results
+    printf("\nGantt Chart: ");
+    for (int i = 0; i < gantt_index; i++) {
+        printf("P%d ", gantt[i]);
+    }
+    printf("\n");
+
+    // Display turnaround and waiting times
+    printf("\nProcess\tArrival\tBurst\tPriority\tWaiting\tTurnaround\n");
+    for (int i = 0; i < n; i++) {
+        printf("P%d\t%d\t%d\t%d\t\t%d\t%d\n", processes[i].pid, processes[i].arrival, processes[i].burst, processes[i].priority, processes[i].waiting, processes[i].turnaround);
+    }
+
+    printf("\nAverage Waiting Time: %.2f\n", (float)total_waiting_time / n);
+    printf("Average Turnaround Time: %.2f\n", (float)total_turnaround_time / n);
+
+    return 0;
+}
+ 
+                                                         Slip 20                                                      ,
+
+Q.1 Write a program to create a child process using fork().The parent should goto sleep state and
+child process should begin its execution. In the child process, use execl() to execute the “ls”
+command.
+
+Ans:
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+int main() {
+    pid_t pid;
+
+    // Create a child process
+    pid = fork();
+
+    if (pid < 0) {
+        // Error occurred
+        perror("Fork failed");
+        exit(1);
+    } else if (pid == 0) {
+        // Child process
+        printf("Child Process: Executing 'ls' command...\n");
+        execl("/bin/ls", "ls", NULL); // Execute the 'ls' command
+        // If execl returns, it means there was an error
+        perror("execl failed");
+        exit(1);
+    } else {
+        // Parent process
+        printf("Parent Process: Going to sleep...\n");
+        sleep(5); // Sleep for 5 seconds
+        printf("Parent Process: Waking up after sleep.\n");
+        
+        // Wait for the child process to complete
+        wait(NULL);
+        printf("Parent Process: Child has finished executing.\n");
+    }
+
+    return 0;
+}
+
+Q.2 Write the simulation program to implement demand paging and show the page scheduling  and total number of page faults for the following given page reference string. Give input n=3 as  the number of memory frames.
+
+Reference String : 7, 0, 1, 2, 0, 3, 0, 4, 2, 3, 0, 3, 2
+i. Implement LRU
+Ans:
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#define MAX_FRAMES 10
+#define MAX_PAGES 20
+
+// Function to check if a page is in memory
+int is_page_in_memory(int page, int frames[], int frame_count) {
+    for (int i = 0; i < frame_count; i++) {
+        if (frames[i] == page) {
+            return 1; // Page found
+        }
+    }
+    return 0; // Page not found
+}
+
+// Function to find the index of the least recently used page
+int find_lru_index(int frames[], int frame_count, int time[], int current_time) {
+    int lru_index = 0;
+    int min_time = current_time; // Set initial min_time to current_time
+
+    for (int i = 0; i < frame_count; i++) {
+        if (time[i] < min_time) {
+            min_time = time[i];
+            lru_index = i; // Update index of the least recently used page
+        }
+    }
+    return lru_index;
+}
+
+int main() {
+    int frames[MAX_FRAMES];
+    int reference_string[] = {7, 0, 1, 2, 0, 3, 0, 4, 2, 3, 0, 3, 2};
+    int n = sizeof(reference_string) / sizeof(reference_string[0]);
+    int frame_count = 3; // Number of memory frames
+    int page_faults = 0;
+    int time[MAX_FRAMES]; // To store the last used time of pages
+
+    // Initialize frames and time arrays
+    for (int i = 0; i < frame_count; i++) {
+        frames[i] = -1; // -1 indicates an empty frame
+        time[i] = -1;   // -1 indicates the page has not been used
+    }
+
+    printf("Reference String: ");
+    for (int i = 0; i < n; i++) {
+        printf("%d ", reference_string[i]);
+    }
+    printf("\n");
+
+    for (int current_time = 0; current_time < n; current_time++) {
+        int page = reference_string[current_time];
+        // Check if the page is already in memory
+        if (!is_page_in_memory(page, frames, frame_count)) {
+            // Page fault occurs
+            page_faults++;
+            int replace_index = -1;
+
+            // Check for an empty frame
+            for (int i = 0; i < frame_count; i++) {
+                if (frames[i] == -1) {
+                    replace_index = i; // Replace empty frame
+                    break;
+                }
+            }
+
+            // If no empty frame is found, use LRU algorithm to replace
+            if (replace_index == -1) {
+                replace_index = find_lru_index(frames, frame_count, time, current_time);
+            }
+
+            // Replace the page in memory
+            frames[replace_index] = page;
+            time[replace_index] = current_time; // Update last used time
+            printf("Page fault occurred! Replacing frame with: %d\n", page);
+        } else {
+            // Update last used time for this page
+            for (int i = 0; i < frame_count; i++) {
+                if (frames[i] == page) {
+                    time[i] = current_time; // Update the time of the current page
+                    break;
+                }
+            }
+        }
+
+        // Print the current state of frames
+        printf("Current frames: ");
+        for (int i = 0; i < frame_count; i++) {
+            if (frames[i] != -1) {
+                printf("%d ", frames[i]);
+            }
+        }
+        printf("\n");
+    }
+
+    // Print total page faults
+    printf("Total number of page faults: %d\n", page_faults);
+    return 0;
+}
+
+
+
