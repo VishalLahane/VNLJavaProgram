@@ -1,0 +1,571 @@
+Q.1 Write a program to find the execution time taken for execution of a given set of instructions
+(use clock() function)
+
+
+ANS
+#include <stdio.h>
+#include <time.h>
+
+void perform_task() {
+    // Simulating a task by running a loop
+    long sum = 0;
+    for (long i = 0; i < 100000000; i++) {
+        sum += i;
+    }
+    printf("Sum: %ld\n", sum);
+}
+
+int main() {
+    // Start the clock
+    clock_t start_time = clock();
+
+    // Perform the task
+    perform_task();
+
+    // Stop the clock
+    clock_t end_time = clock();
+
+    // Calculate the time taken in seconds
+    double time_taken = (double)(end_time - start_time) / CLOCKS_PER_SEC;
+
+    // Print the time taken
+    printf("Time taken: %f seconds\n", time_taken);
+
+    return 0;
+}
+
+Q.2 Write the simulation program to implement demand paging and show the page scheduling
+and total number of page faults for the following given page reference string. Give input n as the
+number of memory frames.
+Reference String :3, 4, 5, 6, 3, 4, 7, 3, 4, 5, 6, 7, 2, 4, 6
+Implement FIFO
+ANS:
+#include <stdio.h>
+
+#define MAX_FRAMES 10
+#define MAX_REFERENCES 15
+
+void print_frames(int frames[], int frame_count) {
+    for (int i = 0; i < frame_count; i++) {
+        if (frames[i] != -1) {
+            printf("%d ", frames[i]);
+        } else {
+            printf("- "); // For empty frames
+        }
+    }
+    printf("\n");
+}
+
+int main() {
+    int frames[MAX_FRAMES];
+    int frame_count, page_faults = 0;
+    int reference_string[MAX_REFERENCES] = {3, 4, 5, 6, 3, 4, 7, 3, 4, 5, 6, 7, 2, 4, 6};
+    int n = sizeof(reference_string) / sizeof(reference_string[0]);
+
+    // Initialize frames
+    for (int i = 0; i < MAX_FRAMES; i++) {
+        frames[i] = -1; // -1 indicates an empty frame
+    }
+
+    printf("Enter the number of memory frames (max %d): ", MAX_FRAMES);
+    scanf("%d", &frame_count);
+    if (frame_count > MAX_FRAMES || frame_count <= 0) {
+        printf("Invalid number of frames. Please enter a number between 1 and %d.\n", MAX_FRAMES);
+        return 1;
+    }
+
+    int next_frame = 0; // Next frame to be replaced
+
+    printf("Reference String: ");
+    for (int i = 0; i < n; i++) {
+        printf("%d ", reference_string[i]);
+    }
+    printf("\n");
+
+    printf("Frame State after each reference:\n");
+
+    for (int i = 0; i < n; i++) {
+        int page_found = 0;
+
+        // Check if the page is already in one of the frames
+        for (int j = 0; j < frame_count; j++) {
+            if (frames[j] == reference_string[i]) {
+                page_found = 1; // Page is found in memory
+                break;
+            }
+        }
+
+        // If page not found, a page fault occurs
+        if (!page_found) {
+            frames[next_frame] = reference_string[i]; // Replace the oldest page
+            next_frame = (next_frame + 1) % frame_count; // Move to the next frame
+            page_faults++;
+        }
+
+        print_frames(frames, frame_count); // Print current state of frames
+    }
+
+    printf("Total number of page faults: %d\n", page_faults);
+    return 0;
+}
+
+
+
+                                                     Slip 7                                                         .
+
+
+Q.1 Write a program to create a child process using fork().The parent should goto sleep state and
+child process should begin its execution. In the child process, use execl() to execute the “ls”
+command.
+ANS:
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+int main() {
+    pid_t pid = fork(); // Create a new process
+
+    if (pid < 0) {
+        // Fork failed
+        perror("Fork failed");
+        return 1;
+    } else if (pid == 0) {
+        // Child process
+        printf("Child process (PID: %d) executing 'ls' command...\n", getpid());
+        // Execute the 'ls' command
+        execl("/bin/ls", "ls", NULL);
+        // If execl returns, it must have failed
+        perror("execl failed");
+        exit(1);
+    } else {
+        // Parent process
+        printf("Parent process (PID: %d) going to sleep...\n", getpid());
+        sleep(5); // Sleep for 5 seconds
+        printf("Parent process (PID: %d) woke up!\n", getpid());
+        
+        // Optionally, wait for the child process to finish
+        wait(NULL);
+        printf("Child process finished. Parent exiting.\n");
+    }
+
+    return 0;
+}
+
+Q.2 Write the simulation program using FCFS. The arrival time and first CPU bursts of different jobs should be input to the system. Assume the fixed I/O waiting time (2 units). The next CPU  burst should be generated using random function. The output should give the Gantt chart, Turnaround Time and Waiting time for each process and average times
+ANS:
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define MAX_PROCESSES 10
+
+typedef struct {
+    int id;
+    int arrival_time;
+    int burst_time;
+    int waiting_time;
+    int turnaround_time;
+} Process;
+
+void generate_random_burst(Process *p) {
+    // Generate a random CPU burst between 1 and 10
+    p->burst_time = rand() % 10 + 1;
+}
+
+void print_gantt_chart(Process processes[], int n) {
+    printf("\nGantt Chart:\n|");
+    for (int i = 0; i < n; i++) {
+        printf(" P%d |", processes[i].id);
+    }
+    printf("\n");
+}
+
+int main() {
+    srand(time(NULL)); // Seed for random number generation
+
+    Process processes[MAX_PROCESSES];
+    int n;
+
+    // Input number of processes
+    printf("Enter the number of processes (max %d): ", MAX_PROCESSES);
+    scanf("%d", &n);
+
+    // Input arrival times and initial burst times
+    for (int i = 0; i < n; i++) {
+        processes[i].id = i + 1;
+        printf("Enter arrival time and first CPU burst for Process P%d: ", processes[i].id);
+        scanf("%d %d", &processes[i].arrival_time, &processes[i].burst_time);
+    }
+
+    // Sort processes by arrival time (FCFS)
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = 0; j < n - i - 1; j++) {
+            if (processes[j].arrival_time > processes[j + 1].arrival_time) {
+                Process temp = processes[j];
+                processes[j] = processes[j + 1];
+                processes[j + 1] = temp;
+            }
+        }
+    }
+
+    int current_time = 0;
+
+    // Calculate waiting and turnaround times
+    for (int i = 0; i < n; i++) {
+        if (current_time < processes[i].arrival_time) {
+            current_time = processes[i].arrival_time; // Idle CPU until the process arrives
+        }
+
+        processes[i].waiting_time = current_time - processes[i].arrival_time;
+        current_time += processes[i].burst_time; // CPU time after process is finished
+        processes[i].turnaround_time = processes[i].waiting_time + processes[i].burst_time;
+
+        // Generate next CPU burst (for demonstration)
+        generate_random_burst(&processes[i]);
+    }
+
+    // Print Gantt Chart
+    print_gantt_chart(processes, n);
+
+    // Print results
+    printf("\nProcess\tArrival\tBurst\tWaiting\tTurnaround\n");
+    int total_waiting_time = 0;
+    int total_turnaround_time = 0;
+
+    for (int i = 0; i < n; i++) {
+        printf("P%d\t%d\t%d\t%d\t%d\n", 
+            processes[i].id, 
+            processes[i].arrival_time, 
+            processes[i].burst_time, 
+            processes[i].waiting_time, 
+            processes[i].turnaround_time);
+        
+        total_waiting_time += processes[i].waiting_time;
+        total_turnaround_time += processes[i].turnaround_time;
+    }
+
+    printf("\nAverage Waiting Time: %.2f\n", (float)total_waiting_time / n);
+    printf("Average Turnaround Time: %.2f\n", (float)total_turnaround_time / n);
+
+    return 0;
+}
+                                                             Slip 8                                                                ,
+
+
+Q.1 Write a C program to accept the number of process and resources and find the need matrix
+content and display it.
+Ans:
+#include <stdio.h>
+
+#define MAX_PROCESSES 10
+#define MAX_RESOURCES 10
+
+void calculate_need(int processes[], int allocation[][MAX_RESOURCES], 
+                   int max[][MAX_RESOURCES], int need[][MAX_RESOURCES], int n, int m) {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < m; j++) {
+            need[i][j] = max[i][j] - allocation[i][j];
+        }
+    }
+}
+
+int main() {
+    int n, m; // Number of processes and resources
+    int processes[MAX_PROCESSES];
+    int allocation[MAX_PROCESSES][MAX_RESOURCES];
+    int max[MAX_PROCESSES][MAX_RESOURCES];
+    int need[MAX_PROCESSES][MAX_RESOURCES];
+
+    // Input number of processes and resources
+    printf("Enter number of processes: ");
+    scanf("%d", &n);
+    printf("Enter number of resources: ");
+    scanf("%d", &m);
+
+    // Input allocation matrix
+    printf("Enter allocation matrix:\n");
+    for (int i = 0; i < n; i++) {
+        processes[i] = i;
+        for (int j = 0; j < m; j++) {
+            scanf("%d", &allocation[i][j]);
+        }
+    }
+
+    // Input max matrix
+    printf("Enter maximum matrix:\n");
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < m; j++) {
+            scanf("%d", &max[i][j]);
+        }
+    }
+
+    // Calculate need matrix
+    calculate_need(processes, allocation, max, need, n, m);
+
+    // Display need matrix
+    printf("\nNeed Matrix:\n");
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < m; j++) {
+            printf("%d ", need[i][j]);
+        }
+        printf("\n");
+    }
+
+    return 0;
+}
+
+
+OR
+
+Q.2. Write the simulation program to implement demand paging and show the page scheduling
+and total number of page faults for the following given page reference string. Give input n =3 as
+the number of memory frames.
+Reference String : 12,15,12,18,6,8,11,12,19,12,6,8,12,15,19,8
+Implement OPT [20 marks]
+
+ANS:
+#include <stdio.h>
+
+#define MAX_FRAMES 3
+#define MAX_REFERENCES 16
+
+void print_frames(int frames[], int frame_count) {
+    for (int i = 0; i < frame_count; i++) {
+        if (frames[i] != -1) {
+            printf("%d ", frames[i]);
+        } else {
+            printf("- "); // For empty frames
+        }
+    }
+    printf("\n");
+}
+
+int find_optimal_page(int frames[], int n, int reference[], int index, int frame_count) {
+    int farthest = index;
+    int optimal_page = -1;
+
+    for (int i = 0; i < frame_count; i++) {
+        int j;
+        for (j = index; j < n; j++) {
+            if (frames[i] == reference[j]) {
+                if (j > farthest) {
+                    farthest = j;
+                    optimal_page = i;
+                }
+                break;
+            }
+        }
+        // If the page is not found, it is the optimal candidate for replacement
+        if (j == n) {
+            return i;
+        }
+    }
+    return (optimal_page == -1) ? 0 : optimal_page; // If all pages are found, return the first page
+}
+
+int main() {
+    int frames[MAX_FRAMES];
+    int reference_string[MAX_REFERENCES] = {12, 15, 12, 18, 6, 8, 11, 12, 19, 12, 6, 8, 12, 15, 19, 8};
+    int n = sizeof(reference_string) / sizeof(reference_string[0]);
+    int page_faults = 0;
+
+    // Initialize frames
+    for (int i = 0; i < MAX_FRAMES; i++) {
+        frames[i] = -1; // -1 indicates an empty frame
+    }
+
+    printf("Reference String: ");
+    for (int i = 0; i < n; i++) {
+        printf("%d ", reference_string[i]);
+    }
+    printf("\n");
+
+    printf("Frame State after each reference:\n");
+
+    for (int i = 0; i < n; i++) {
+        int page_found = 0;
+
+        // Check if the page is already in one of the frames
+        for (int j = 0; j < MAX_FRAMES; j++) {
+            if (frames[j] == reference_string[i]) {
+                page_found = 1; // Page is found in memory
+                break;
+            }
+        }
+
+        // If page not found, a page fault occurs
+        if (!page_found) {
+            // Find the optimal page to replace
+            int replace_index = find_optimal_page(frames, n, reference_string, i + 1, MAX_FRAMES);
+            frames[replace_index] = reference_string[i]; // Replace the page
+            page_faults++;
+        }
+
+        print_frames(frames, MAX_FRAMES); // Print current state of frames
+    }
+
+    printf("Total number of page faults: %d\n", page_faults);
+    return 0;
+}
+
+
+                                                       Slip 9                                                                 ,
+
+Q.1 Write a program to create a child process using fork().The parent should goto sleep state and
+child process should begin its execution. In the child process, use execl() to execute the “ls”
+command.
+Ans:
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+int main() {
+    pid_t pid = fork(); // Create a new process
+
+    if (pid < 0) {
+        // Fork failed
+        perror("Fork failed");
+        return 1;
+    } else if (pid == 0) {
+        // Child process
+        printf("Child process (PID: %d) executing 'ls' command...\n", getpid());
+        
+        // Execute the 'ls' command
+        execl("/bin/ls", "ls", NULL);
+        
+        // If execl returns, it must have failed
+        perror("execl failed");
+        exit(1);
+    } else {
+        // Parent process
+        printf("Parent process (PID: %d) going to sleep...\n", getpid());
+        sleep(5); // Sleep for 5 seconds
+        printf("Parent process (PID: %d) woke up!\n", getpid());
+        
+        // Optionally, wait for the child process to finish
+        wait(NULL);
+        printf("Child process finished. Parent exiting.\n");
+    }
+
+    return 0;
+}
+
+OR
+
+Q.2 Write the program to simulate Round Robin (RR) scheduling. The arrival time and first CPU-
+burst for different n number of processes should be input to the algorithm. Also give the time
+
+quantum as input. Assume the fixed IO waiting time (2 units). The next CPU-burst should be
+generated randomly. The output should give Gantt chart, turnaround time and waiting time for each
+process. Also find the average waiting time and turnaround time.
+Ans:
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <time.h>
+
+#define MAX_PROCESSES 10
+
+typedef struct {
+    int id;
+    int arrival_time;
+    int burst_time;
+    int remaining_time;
+    int waiting_time;
+    int turnaround_time;
+} Process;
+
+void generate_random_burst(Process *p) {
+    // Generate a random CPU burst between 1 and 10
+    p->burst_time = rand() % 10 + 1;
+    p->remaining_time = p->burst_time; // Initialize remaining time
+}
+
+void print_gantt_chart(int order[], int size) {
+    printf("\nGantt Chart:\n|");
+    for (int i = 0; i < size; i++) {
+        printf(" P%d |", order[i]);
+    }
+    printf("\n");
+}
+
+int main() {
+    srand(time(NULL)); // Seed for random number generation
+
+    Process processes[MAX_PROCESSES];
+    int n; // Number of processes
+    int time_quantum;
+
+    // Input number of processes
+    printf("Enter the number of processes (max %d): ", MAX_PROCESSES);
+    scanf("%d", &n);
+
+    // Input arrival times and initial burst times
+    for (int i = 0; i < n; i++) {
+        processes[i].id = i + 1; // Process ID
+        printf("Enter arrival time and first CPU burst for Process P%d: ", processes[i].id);
+        scanf("%d %d", &processes[i].arrival_time, &processes[i].burst_time);
+        generate_random_burst(&processes[i]); // Generate a new random burst
+    }
+
+    // Input time quantum
+    printf("Enter the time quantum: ");
+    scanf("%d", &time_quantum);
+
+    int time = 0; // Current time
+    bool all_done = false;
+    int order[MAX_PROCESSES * 10]; // Store the order of execution for Gantt chart
+    int index = 0;
+
+    while (!all_done) {
+        all_done = true; // Assume all processes are done
+        for (int i = 0; i < n; i++) {
+            if (processes[i].remaining_time > 0) {
+                all_done = false; // At least one process is not done
+                if (processes[i].arrival_time <= time) {
+                    int burst = (processes[i].remaining_time < time_quantum) ? processes[i].remaining_time : time_quantum;
+                    processes[i].remaining_time -= burst;
+                    time += burst; // Increment current time
+                    order[index++] = processes[i].id; // Record the order of execution
+
+                    if (processes[i].remaining_time == 0) {
+                        processes[i].turnaround_time = time - processes[i].arrival_time;
+                        processes[i].waiting_time = processes[i].turnaround_time - processes[i].burst_time;
+                    }
+                }
+            }
+        }
+    }
+
+    // Print Gantt Chart
+    print_gantt_chart(order, index);
+
+    // Print results
+    printf("\nProcess\tArrival\tBurst\tWaiting\tTurnaround\n");
+    int total_waiting_time = 0;
+    int total_turnaround_time = 0;
+
+    for (int i = 0; i < n; i++) {
+        printf("P%d\t%d\t%d\t%d\t%d\n",
+               processes[i].id,
+               processes[i].arrival_time,
+               processes[i].burst_time,
+               processes[i].waiting_time,
+               processes[i].turnaround_time);
+        
+        total_waiting_time += processes[i].waiting_time;
+        total_turnaround_time += processes[i].turnaround_time;
+    }
+
+    printf("\nAverage Waiting Time: %.2f\n", (float)total_waiting_time / n);
+    printf("Average Turnaround Time: %.2f\n", (float)total_turnaround_time / n);
+
+    return 0;
+}
+
